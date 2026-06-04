@@ -30,17 +30,22 @@ export default function NewExamPage() {
   const router = useRouter()
   const [batches, setBatches] = useState([])
   const [batchError, setBatchError] = useState('')
-  const [form, setForm] = useState(() => ({
+  const [form, setForm] = useState({
     title: '',
     subject: 'Physics',
     batchId: '',
-    startTime: defaultStart(),
+    startTime: '',
     durationMinutes: 30,
     endTime: '',
-  }))
+  })
   const [questions, setQuestions] = useState([emptyQuestion()])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+
+  // Run only in the browser so the local timezone is used, not the server's UTC
+  useEffect(() => {
+    setForm((prev) => ({ ...prev, startTime: defaultStart() }))
+  }, [])
 
   // Load batches
   useEffect(() => {
@@ -114,6 +119,8 @@ export default function NewExamPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
+          startTime: new Date(form.startTime).toISOString(),
+          endTime:   new Date(form.endTime).toISOString(),
           durationMinutes: Number(form.durationMinutes),
           questions,
         }),
