@@ -2,19 +2,28 @@
   "name": "my-app",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "node server.js",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "node server.js",
+    "lint": "eslint",
+    "seed": "node scripts/seed.js",
+    "cron-dev": "node scripts/cron-dev.js"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "jose": "^6.2.3",
+    "mongoose": "^9.6.3",
     "next": "16.2.7",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
     "tailwindcss": "^4"
