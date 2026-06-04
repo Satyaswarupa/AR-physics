@@ -36,7 +36,7 @@ export default function LandingNav() {
             href="/login"
             className="rounded-lg bg-yellow-400 text-blue-950 text-sm font-bold px-4 py-2 hover:bg-yellow-300 transition-colors whitespace-nowrap"
           >
-            Student Login
+            Exam center
           </Link>
           <button
             onClick={() => setMenuOpen((v) => !v)}

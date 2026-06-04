@@ -193,6 +193,13 @@ export default function StudentDashboard() {
     return () => socket?.disconnect()
   }, [fetchExams])
 
+  // Polling fallback for serverless hosts (Vercel) where Socket.IO is unavailable
+  useEffect(() => {
+    if (connected) return
+    const t = setInterval(fetchExams, 20_000)
+    return () => clearInterval(t)
+  }, [connected, fetchExams])
+
   // Classify using reactive `now` so transitions happen without a re-fetch
   const live     = exams.filter((e) => classifyExam(e, now) === 'live')
   const upcoming = exams.filter((e) => classifyExam(e, now) === 'upcoming')

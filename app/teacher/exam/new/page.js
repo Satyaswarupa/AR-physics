@@ -3,10 +3,26 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
+const DURATION_PRESETS = [15, 30, 45, 60, 90, 120]
+
+function pad(n) { return String(n).padStart(2, '0') }
+
+function toDatetimeLocal(date) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function defaultStart() {
+  const d = new Date()
+  d.setSeconds(0, 0)
+  // Round up to next 5-minute mark, then add 5 more minutes
+  d.setMinutes(Math.ceil((d.getMinutes() + 1) / 5) * 5 + 5)
+  return toDatetimeLocal(d)
+}
+
 const emptyQuestion = () => ({
   text: '',
   options: ['', '', '', ''],
-  correctOption: null, // null = not selected yet, teacher must pick
+  correctOption: null,
   marks: 1,
 })
 
@@ -14,14 +30,14 @@ export default function NewExamPage() {
   const router = useRouter()
   const [batches, setBatches] = useState([])
   const [batchError, setBatchError] = useState('')
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(() => ({
     title: '',
     subject: 'Physics',
     batchId: '',
-    startTime: '',
+    startTime: defaultStart(),
     durationMinutes: 30,
-    endTime: '', // auto-calculated but shown
-  })
+    endTime: '',
+  }))
   const [questions, setQuestions] = useState([emptyQuestion()])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -176,37 +192,101 @@ export default function NewExamPage() {
             </div>
           </div>
 
-          {/* Timing row */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Start Time *</label>
-              <input
-                required
-                type="datetime-local"
-                value={form.startTime}
-                onChange={(e) => setForm({ ...form, startTime: e.target.value })}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes) *</label>
-              <input
-                required
-                type="number"
-                min={1}
-                value={form.durationMinutes}
-                onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+          {/* ── Start time ── */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Start Time *</label>
+            <input
+              required
+              type="datetime-local"
+              value={form.startTime}
+              onChange={(e) => setForm({ ...form, startTime: e.target.value })}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {/* Quick-set shortcuts */}
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {[
+                { label: 'Now', offset: 0 },
+                { label: '+5 min', offset: 5 },
+                { label: '+15 min', offset: 15 },
+                { label: '+30 min', offset: 30 },
+                { label: '+1 hr', offset: 60 },
+                { label: '+2 hr', offset: 120 },
+              ].map(({ label, offset }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => {
+                    const d = new Date()
+                    d.setSeconds(0, 0)
+                    d.setMinutes(d.getMinutes() + offset)
+                    setForm((prev) => ({ ...prev, startTime: toDatetimeLocal(d) }))
+                  }}
+                  className="rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-600 hover:border-blue-400 hover:text-blue-700 transition-colors"
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Auto-calculated end time — read-only display */}
+          {/* ── Duration ── */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Duration *</label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {DURATION_PRESETS.map((d) => {
+                const active = Number(form.durationMinutes) === d
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setForm((prev) => ({ ...prev, durationMinutes: d }))}
+                    className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                      active
+                        ? 'bg-blue-900 text-white shadow-sm'
+                        : 'border border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:text-blue-700'
+                    }`}
+                  >
+                    {d < 60 ? `${d} min` : `${d / 60} hr${d > 60 ? 's' : ''}`}
+                  </button>
+                )
+              })}
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xs text-gray-400">Custom:</span>
+              <input
+                type="number"
+                min={1}
+                max={480}
+                value={form.durationMinutes}
+                onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })}
+                className="w-24 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="text-xs text-gray-400">minutes</span>
+            </div>
+          </div>
+
+          {/* Auto-calculated exam window */}
           {form.endTime && (
-            <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-800">
-              <span className="font-medium">Exam window closes:</span>{' '}
-              {new Date(form.endTime).toLocaleString()}
-              <span className="text-blue-500 ml-2 text-xs">(start time + duration)</span>
+            <div className="rounded-xl bg-blue-50 border border-blue-200 px-4 py-3">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                  </svg>
+                </div>
+                <div className="text-sm">
+                  <div className="font-semibold text-blue-900 mb-0.5">Exam Window</div>
+                  <div className="text-blue-700">
+                    <span className="font-medium">Opens:</span> {form.startTime ? new Date(form.startTime).toLocaleString() : '—'}
+                  </div>
+                  <div className="text-blue-700">
+                    <span className="font-medium">Closes:</span> {new Date(form.endTime).toLocaleString()}
+                  </div>
+                  <div className="text-blue-500 text-xs mt-1">
+                    Students have {form.durationMinutes} minute{Number(form.durationMinutes) !== 1 ? 's' : ''} from when they start
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
